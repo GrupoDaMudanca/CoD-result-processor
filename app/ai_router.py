@@ -6,10 +6,10 @@ from config import GROQ_API_KEY
 logger = logging.getLogger(__name__)
 
 MODELS = [
-    "llama-3.3-70b-versatile",
     "openai/gpt-oss-120b",
-    "qwen/qwen3-32b",
-    "llama-3.1-8b-instant"
+    "qwen/qwen3.6-27b",
+    "groq/compound",
+    "openai/gpt-oss-20b"
 ]
 
 SYSTEM_PROMPT_TEMPLATE = """You are the internal command router for a Call of Duty statistics bot on Telegram and WhatsApp.

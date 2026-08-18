@@ -26,7 +26,10 @@ class WhatsAppWebhookServer:
             if message.get('fromMe', False):
                 return jsonify({"status": "ignored"}), 200
 
-            if WHATSAPP_CHAT_ID:
+            chat_id = message.get('from')
+            is_private = chat_id and not chat_id.endswith('@g.us')
+            
+            if WHATSAPP_CHAT_ID and not is_private:
                 if message.get('from') != WHATSAPP_CHAT_ID and message.get('to') != WHATSAPP_CHAT_ID:
                     return jsonify({"status": "ignored"}), 200
 

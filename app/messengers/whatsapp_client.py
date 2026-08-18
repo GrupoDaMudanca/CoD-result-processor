@@ -9,13 +9,14 @@ from app.messengers.base import MessengerClient
 from config import WHATSAPP_SEND_MESSAGE_ENDPOINT, WHATSAPP_CHAT_ID
 
 class WhatsAppClient(MessengerClient):
-    def send_message(self, text: str, reply_to_message_id: str = None, msg_type: str = "UNKNOWN"):
-        if not WHATSAPP_CHAT_ID:
+    def send_message(self, text: str, reply_to_message_id: str = None, msg_type: str = "UNKNOWN", chat_id: str = None):
+        target_chat = chat_id or WHATSAPP_CHAT_ID
+        if not target_chat:
             logger.error("WHATSAPP_CHAT_ID is not configured in environment variables.")
             return None
             
         payload = {
-            "chatId": WHATSAPP_CHAT_ID,
+            "chatId": target_chat,
             "contentType": "string",
             "content": text
         }
@@ -34,8 +35,9 @@ class WhatsAppClient(MessengerClient):
                 logger.error(f"Failed to send WhatsApp message: {e}")
             return None
 
-    def send_photo(self, photo_path: str, caption: str = None, reply_to_message_id: str = None, msg_type: str = "UNKNOWN"):
-        if not WHATSAPP_CHAT_ID:
+    def send_photo(self, photo_path: str, caption: str = None, reply_to_message_id: str = None, msg_type: str = "UNKNOWN", chat_id: str = None):
+        target_chat = chat_id or WHATSAPP_CHAT_ID
+        if not target_chat:
             logger.error("WHATSAPP_CHAT_ID is not configured in environment variables.")
             return None
             
@@ -53,7 +55,7 @@ class WhatsAppClient(MessengerClient):
             mimetype = "image/png" if photo_path.endswith('.png') else "image/jpeg"
             
             payload = {
-                "chatId": WHATSAPP_CHAT_ID,
+                "chatId": target_chat,
                 "contentType": "MessageMedia",
                 "content": {
                     "mimetype": mimetype,
@@ -98,7 +100,9 @@ class WhatsAppClient(MessengerClient):
                     data = response.json()
                     # {"success":true,"state":"CONNECTED"} or similar indicates ready
                     if data.get("state") == "CONNECTED" or data.get("success") == True:
-                        logger.info("WhatsApp session is connected and ready.")
+                        logger.info("WhatsApp session is connected. Waiting 15s for chats to populate...")
+                        time.sleep(15)
+                        logger.info("WhatsApp session is fully ready.")
                         return True
             except Exception:
                 pass

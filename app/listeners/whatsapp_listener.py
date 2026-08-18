@@ -177,6 +177,7 @@ class WhatsAppListener(BaseListener):
             from_id = message.get('author') or message.get('from')
             chat_id = message.get('from')
             
+
             if text.startswith('/'):
                 admins = self._get_chat_administrators(chat_id)
                 from_id = message.get('author') or message.get('from')
@@ -209,9 +210,7 @@ class WhatsAppListener(BaseListener):
             if any(b_id in mentioned_ids for b_id in self.bot_ids) or (msg_to in mentioned_ids):
                 is_mentioned = True
                 
-            # Check if it's a private chat
-            if chat_id and not chat_id.endswith('@g.us'):
-                is_mentioned = True
+            # Private chats are already fully handled above and skipped, so this will only match explicit mentions in groups.
                 
             if is_mentioned and text.strip():
                 # Clean up mentions to save tokens

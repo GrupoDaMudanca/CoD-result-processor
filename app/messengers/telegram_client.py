@@ -11,9 +11,13 @@ from config import (
 )
 
 class TelegramClient(MessengerClient):
-    def send_message(self, text: str, reply_to_message_id: str = None, msg_type: str = "UNKNOWN"):
+    def send_message(self, text: str, reply_to_message_id: str = None, msg_type: str = "UNKNOWN", chat_id: str = None):
+        target_chat = chat_id or TELEGRAM_CHAT_ID
+        if not target_chat:
+            return None
+
         params = {
-            'chat_id': TELEGRAM_CHAT_ID,
+            'chat_id': target_chat,
             'text': text
         }
         if reply_to_message_id:
@@ -27,11 +31,15 @@ class TelegramClient(MessengerClient):
             logger.error(f'Failed to send Telegram message: {e}')
             return None
 
-    def send_photo(self, photo_path: str, caption: str = None, reply_to_message_id: str = None, msg_type: str = "UNKNOWN"):
+    def send_photo(self, photo_path: str, caption: str = None, reply_to_message_id: str = None, msg_type: str = "UNKNOWN", chat_id: str = None):
+        target_chat = chat_id or TELEGRAM_CHAT_ID
+        if not target_chat:
+            return None
+
         try:
             with open(photo_path, 'rb') as photo:
                 files = {'photo': photo}
-                data = {'chat_id': TELEGRAM_CHAT_ID}
+                data = {'chat_id': target_chat}
                 if caption:
                     data['caption'] = caption
                 if reply_to_message_id:

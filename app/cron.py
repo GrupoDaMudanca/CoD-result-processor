@@ -25,6 +25,8 @@ def send_daily_citation():
     
     if citation:
         res = messenger.send_message(f"📖 *Pérola do Dia:*\n\n{citation}", msg_type="CITATION_DAILY")
+        if res is None:
+            raise Exception("Failed to send daily citation message")
         if res:
             mark_job_sent("citation")
     else:
@@ -75,6 +77,8 @@ def send_daily_win_check():
         else:
             res = messenger.send_message(random.choice(WIN_CHECK_FAIL_MESSAGES), msg_type="WIN_CHECK_FAIL")
             
+    if res is None:
+        raise Exception("Failed to send win check message")
     if res:
         mark_job_sent("win_check")
 
@@ -130,6 +134,8 @@ def send_morning_motivation():
         logger.info("They won yesterday, so no motivation needed today.")
         res = True
         
+    if res is None:
+        raise Exception("Failed to send morning motivation message")
     if res:
         mark_job_sent("morning_motivation")
 
@@ -199,6 +205,8 @@ def send_monthly_awards():
             
     final_text = "\n\n".join(text_parts)
     res = messenger.send_message(final_text, msg_type="MONTHLY_AWARDS")
+    if res is None:
+        raise Exception("Failed to send monthly awards message")
     if res:
         mark_job_sent("monthly_awards")
 
@@ -265,6 +273,8 @@ def send_month_end_hype():
         
         msg = "\n\n".join(text_parts)
         res = messenger.send_message(msg, msg_type="MONTH_END_HYPE")
+        if res is None:
+            raise Exception("Failed to send month end hype message")
         if res:
             mark_job_sent("month_end_hype")
     else:
