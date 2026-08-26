@@ -111,33 +111,6 @@ BACKFILL_NOT_ACTIVE_MESSAGES = [
     "👽 De que planeta tu é? Aqui na Terra a gente começa as coisas antes de terminar. O túnel do tempo tá desligado!",
     "🚪 Tentando fechar uma porta que já tá trancada. Você é sempre brilhante assim?",
     "😂 Eu me divirto com a falta de inteligência de vocês. Inicia o DeLorean primeiro, abençoado!"
-]
-
-
-BACKFILL_UNRESTRICTED_MESSAGES = [
-    "🎉 Ah agora essa bagaça virou casa da mãe Joana mesmo! Tá liberada a máquina do tempo pra qualquer zé ruela.",
-    "🔓 Porteira aberta! A chefia enlouqueceu e liberou o resgate temporal pra plebe. Façam a festa.",
-    "🤡 Virou bagunça! Qualquer um pode fuçar no passado agora. Quero só ver a merda que vai dar.",
-    "🐒 Liberaram a jaula! Podem pedir portal temporal à vontade, bando de primatas. A casa caiu.",
-    "🍻 Open bar de nostalgia! A diretoria liberou o comando pra geral. Não me façam me arrepender disso.",
-    "🎪 O circo tá montado e os palhaços (vocês) têm a chave. Viagem no tempo liberada pra todos!",
-    "🚀 É o fim dos tempos. Qualquer novato agora tem o poder de abrir fenda temporal. Liberou geral!",
-    "💸 Promoção relâmpago: resgate grátis pra todos os mortais! Aproveitem a caridade dos admins.",
-    "🥴 A administração bebeu e liberou o acesso. Podem fazer o resgate, bando de folgados.",
-    "🗑️ Transformaram o bot num lixão público. Qualquer um pode jogar tralha velha aqui agora. Liberado!",
-    "🔓 Quebraram os cadeados! O túnel do tempo agora é de domínio público. Usem com sabedoria (duvido).",
-    "🎊 Festa na favela! O chefe deu a louca e agora vocês não precisam mais implorar pra usar o comando.",
-    "🤪 Anarquia instaurada! Não existe mais lei. Todo mundo pode dar start nessa porcaria agora.",
-    "🚪 A porta da esperança foi escancarada! A plebe agora manda no DeLorean.",
-    "🤷‍♂️ Lavando minhas mãos. Liberaram o sistema pra qualquer amador usar. Boa sorte pra nós.",
-    "🔥 Tá pegando fogo bicho! Portal desimpedido. Vamos ver em quanto tempo vocês quebram o bot.",
-    "🎢 Liberado o acesso à montanha-russa temporal! Não precisam mais de autorização da mamãe.",
-    "🤑 Mamata liberada! Qualquer um agora brinca de Deus com as datas. Usem enquanto dura.",
-    "📢 ATENÇÃO: O asilo abriu as portas. A gerência liberou o túnel do tempo pra vocês.",
-    "🔓 Cadeado estourado com sucesso! Agora até o estagiário consegue brincar no passado."
-]
-
-BACKFILL_RESTRICTED_MESSAGES = [
     "👑 A ditadura voltou! Acabou a bagunça. Agora só os donos do servidor mexem no tempo.",
     "🔒 Fechou a porteira! Quer voltar no passado? Vai chorar pros admins, a mamata acabou.",
     "🛑 Acabou a palhaçada. A plebe volta pro seu lugar e o DeLorean é restrito novamente.",

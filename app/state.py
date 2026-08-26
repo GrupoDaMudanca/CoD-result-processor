@@ -6,8 +6,12 @@ import pytz
 
 logger = logging.getLogger(__name__)
 
-STATE_FILE_PATH = os.getenv("CRON_STATE_FILE_PATH", ".data/cron_state.json")
-TZ = os.getenv("TZ", "America/Sao_Paulo")
+from config import CRON_STATE_FILE_PATH, TZ
+
+def _ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory)
 
 def _get_current_date_str():
     try:
@@ -17,15 +21,23 @@ def _get_current_date_str():
     now = datetime.now(timezone)
     return now.strftime("%Y-%m-%d")
 
+def _save_cron_state(state):
+    _ensure_dir(CRON_STATE_FILE_PATH)
+    try:
+        with open(CRON_STATE_FILE_PATH, 'w') as f:
+            json.dump(state, f, indent=4)
+    except IOError as e:
+        logger.error(f"Failed to save cron state file: {e}")
+
 def get_cron_state():
     """Reads the state file. Resets it if it's a new day."""
     current_date = _get_current_date_str()
     
-    if not os.path.exists(STATE_FILE_PATH):
+    if not os.path.exists(CRON_STATE_FILE_PATH):
         return {"date": current_date, "sent_jobs": []}
-        
+
     try:
-        with open(STATE_FILE_PATH, 'r') as f:
+        with open(CRON_STATE_FILE_PATH, 'r') as f:
             state = json.load(f)
             
         if state.get("date") != current_date:
@@ -45,10 +57,5 @@ def mark_job_sent(job_id):
     if job_id not in state["sent_jobs"]:
         state["sent_jobs"].append(job_id)
         
-    try:
-        os.makedirs(os.path.dirname(STATE_FILE_PATH), exist_ok=True)
-        with open(STATE_FILE_PATH, 'w') as f:
-            json.dump(state, f, indent=4)
-        logger.info(f"Marked job '{job_id}' as sent for {state['date']}")
-    except IOError as e:
-        logger.error(f"Failed to save cron state file: {e}")
+    _save_cron_state(state)
+    logger.info(f"Marked job '{job_id}' as sent for {state['date']}")

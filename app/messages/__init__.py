@@ -8,3 +8,4 @@ from .dashboard import *
 from .backfill import *
 from .reload import *
 from .erase import *
+from .unrestrict import *

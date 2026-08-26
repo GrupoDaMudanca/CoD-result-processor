@@ -98,6 +98,18 @@ def run_daemon():
                 logger.info("Cycle completed successfully. Waiting for new messages...")
         except Exception as e:
             logger.error(f"Unexpected error in main loop: {e}")
+            try:
+                import random
+                from app.messages.system import ERROR_UNEXPECTED_MESSAGES
+                from app.messengers import get_messenger
+                messenger = get_messenger()
+                messenger.send_message(
+                    random.choice(ERROR_UNEXPECTED_MESSAGES),
+                    msg_type="SYSTEM_ERROR"
+                )
+            except Exception as inner_e:
+                logger.error(f"Failed to send error message to WhatsApp: {inner_e}")
+                
             time.sleep(5)  # Pause briefly before retrying to avoid spamming logs
 
 

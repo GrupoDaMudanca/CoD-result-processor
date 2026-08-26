@@ -1,17 +1,21 @@
 import os
 import json
-from config import APP_DIR
+from config import IGNORE_STATE_FILE_PATH
 
-STATE_IGNORE_FILE = os.path.join(APP_DIR, 'state_ignore.json')
+def _ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory)
 
 def set_ignore_player(player_name: str):
-    with open(STATE_IGNORE_FILE, 'w') as f:
+    _ensure_dir(IGNORE_STATE_FILE_PATH)
+    with open(IGNORE_STATE_FILE_PATH, 'w') as f:
         json.dump({"player": player_name}, f)
 
 def get_ignore_player() -> str:
-    if os.path.exists(STATE_IGNORE_FILE):
+    if os.path.exists(IGNORE_STATE_FILE_PATH):
         try:
-            with open(STATE_IGNORE_FILE, 'r') as f:
+            with open(IGNORE_STATE_FILE_PATH, 'r') as f:
                 data = json.load(f)
                 return data.get("player")
         except:
@@ -19,5 +23,5 @@ def get_ignore_player() -> str:
     return None
 
 def clear_ignore_player():
-    if os.path.exists(STATE_IGNORE_FILE):
-        os.remove(STATE_IGNORE_FILE)
+    if os.path.exists(IGNORE_STATE_FILE_PATH):
+        os.remove(IGNORE_STATE_FILE_PATH)

@@ -12,8 +12,7 @@ from app.messages import (
     DASHBOARD_NO_DATA_MESSAGES, DASHBOARD_FUTURE_MONTH_MESSAGES,
     BACKFILL_ALREADY_ACTIVE_MESSAGES, BACKFILL_NOT_ACTIVE_MESSAGES,
     DASHBOARD_INVALID_FORMAT_MESSAGES, DASHBOARD_TOO_MANY_MONTHS_MESSAGES,
-    DASHBOARD_INVERTED_DATES_MESSAGES, BACKFILL_UNRESTRICTED_MESSAGES,
-    BACKFILL_RESTRICTED_MESSAGES
+    DASHBOARD_INVERTED_DATES_MESSAGES
 )
 from app.backfill import set_backfill, clear_backfill, get_backfill, set_unrestricted, clear_unrestricted, is_unrestricted
 
@@ -21,7 +20,7 @@ def handle_command(text: str, message_id: str, from_id: str, chat_id: str, is_ad
     messenger = get_messenger()
     
     if text.startswith('/ignore'):
-        if not is_admin:
+        if not is_admin and not is_unrestricted():
             messenger.send_message(random.choice(UNAUTHORIZED_MESSAGES), reply_to_message_id=message_id, msg_type="UNAUTHORIZED")
             return
             
@@ -52,23 +51,25 @@ def handle_command(text: str, message_id: str, from_id: str, chat_id: str, is_ad
         messenger.send_message(random.choice(IGNORE_ACTIVATED_MESSAGES).format(player_name=matched_key), reply_to_message_id=message_id, msg_type="IGNORE_ACTIVATED")
         return
 
-    if text.startswith('/backfill'):
-        if text == '/backfill unrestrict':
-            if not is_admin:
-                messenger.send_message(random.choice(UNAUTHORIZED_MESSAGES), reply_to_message_id=message_id, msg_type="UNAUTHORIZED")
-                return
-            set_unrestricted()
-            messenger.send_message(random.choice(BACKFILL_UNRESTRICTED_MESSAGES), reply_to_message_id=message_id, msg_type="BACKFILL_UNRESTRICTED")
+    if text == '/unrestrict':
+        if not is_admin and not is_unrestricted():
+            messenger.send_message(random.choice(UNAUTHORIZED_MESSAGES), reply_to_message_id=message_id, msg_type="UNAUTHORIZED")
             return
-            
-        if text == '/backfill restrict':
-            if not is_admin:
-                messenger.send_message(random.choice(UNAUTHORIZED_MESSAGES), reply_to_message_id=message_id, msg_type="UNAUTHORIZED")
-                return
-            clear_unrestricted()
-            messenger.send_message(random.choice(BACKFILL_RESTRICTED_MESSAGES), reply_to_message_id=message_id, msg_type="BACKFILL_RESTRICTED")
+        from app.messages.unrestrict import UNRESTRICTED_MESSAGES
+        set_unrestricted()
+        messenger.send_message(random.choice(UNRESTRICTED_MESSAGES), reply_to_message_id=message_id, msg_type="UNRESTRICTED")
+        return
+        
+    if text == '/restrict':
+        if not is_admin and not is_unrestricted():
+            messenger.send_message(random.choice(UNAUTHORIZED_MESSAGES), reply_to_message_id=message_id, msg_type="UNAUTHORIZED")
             return
+        from app.messages.unrestrict import RESTRICTED_MESSAGES
+        clear_unrestricted()
+        messenger.send_message(random.choice(RESTRICTED_MESSAGES), reply_to_message_id=message_id, msg_type="RESTRICTED")
+        return
 
+    if text.startswith('/backfill'):
         if not is_admin and not is_unrestricted():
             messenger.send_message(random.choice(UNAUTHORIZED_MESSAGES), reply_to_message_id=message_id, msg_type="UNAUTHORIZED")
             return
@@ -231,7 +232,7 @@ def handle_command(text: str, message_id: str, from_id: str, chat_id: str, is_ad
         from app.state_erase import get_erase, set_erase, clear_erase
         from app.messages.erase import ERASE_ACTIVE_MESSAGES, ERASE_INACTIVE_MESSAGES
         
-        if not is_admin:
+        if not is_admin and not is_unrestricted():
             messenger.send_message(random.choice(UNAUTHORIZED_MESSAGES), reply_to_message_id=message_id, msg_type="UNAUTHORIZED")
             return
             
