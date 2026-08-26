@@ -52,10 +52,12 @@ def consolidate_data():
 
         combined_df = pd.concat([latest_df, new_combined])
 
-        consolidated_df = combined_df.drop_duplicates(subset=['match_id', 'player_id'], keep='first')
+        if 'ignore_stats' in combined_df.columns:
+            combined_df['ignore_stats'] = combined_df['ignore_stats'].fillna(False)
+            max_ignore = combined_df.groupby(['match_id', 'player_id'])['ignore_stats'].transform('max')
+            combined_df['ignore_stats'] = max_ignore
 
-        if 'ignore_stats' in consolidated_df.columns:
-            consolidated_df['ignore_stats'] = consolidated_df['ignore_stats'].fillna(False)
+        consolidated_df = combined_df.drop_duplicates(subset=['match_id', 'player_id'], keep='first')
 
         consolidated_df.to_csv(LATEST_OUTPUT_FILE_PATH, index=False)
 
