@@ -16,11 +16,22 @@ def file_valid(file_path):
 
 
 def read_new_match(match_data: list[dict], date: str = None) -> Match:
-    return Match(*[MatchRecord(**record, date=date) for record in match_data])
+    # Ensure ignore_stats is passed explicitly if present, else defaults to False. 
+    # MatchRecord kwargs expect ignore_stats as boolean if provided.
+    return Match(*[MatchRecord(
+        raw_player_name=record.get('raw_player_name'),
+        score=record.get('score', 0),
+        kills=record.get('kills', 0),
+        assists=record.get('assists', 0),
+        redeploys=record.get('redeploys', 0),
+        damage=record.get('damage', 0),
+        date=date,
+        ignore_stats=record.get('ignore_stats', False)
+    ) for record in match_data])
 
 
 def write_matches(matches: list[Match]) -> None:
-    header = ['match_id', 'player_id', 'player_name', 'score', 'kills', 'assists', 'redeploys', 'damage', 'date']
+    header = ['match_id', 'player_id', 'player_name', 'score', 'kills', 'assists', 'redeploys', 'damage', 'date', 'ignore_stats']
 
     with open(
         TEMP_OUTPUT_FILE_PATH,
@@ -42,7 +53,8 @@ def write_matches(matches: list[Match]) -> None:
                 'assists': record.assists,
                 'redeploys': record.redeploys,
                 'damage': record.damage,
-                'date': record.date
+                'date': record.date,
+                'ignore_stats': getattr(record, 'ignore_stats', False)
             }
             for match in matches
             for record in match.records
@@ -80,6 +92,28 @@ def delete_match(match_id: str) -> int:
         import logging
         logging.getLogger(__name__).error(f"Error deleting match {match_id}: {e}")
         return 0
+
+
+def ignore_match_player(match_id: str, player_name: str) -> bool:
+    """Sets ignore_stats to True for a specific player in a given match_id. Returns True if updated."""
+    if file_valid(LATEST_OUTPUT_FILE_PATH):
+        return False
+
+    try:
+        df = pd.read_csv(LATEST_OUTPUT_FILE_PATH)
+        if 'ignore_stats' not in df.columns:
+            df['ignore_stats'] = False
+            
+        mask = (df['match_id'] == match_id) & (df['player_name'] == player_name)
+        if mask.any():
+            df.loc[mask, 'ignore_stats'] = True
+            df.to_csv(LATEST_OUTPUT_FILE_PATH, index=False)
+            return True
+        return False
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error ignoring player {player_name} in match {match_id}: {e}")
+        return False
 
 
 def get_player_names_map() -> dict:

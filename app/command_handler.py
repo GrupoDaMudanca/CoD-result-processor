@@ -20,6 +20,38 @@ from app.backfill import set_backfill, clear_backfill, get_backfill, set_unrestr
 def handle_command(text: str, message_id: str, from_id: str, chat_id: str, is_admin: bool = False):
     messenger = get_messenger()
     
+    if text.startswith('/ignore'):
+        if not is_admin:
+            messenger.send_message(random.choice(UNAUTHORIZED_MESSAGES), reply_to_message_id=message_id, msg_type="UNAUTHORIZED")
+            return
+            
+        args = text.strip().split(maxsplit=1)
+        if len(args) < 2:
+            from app.messages.ignore import IGNORE_MISSING_ARGUMENT_MESSAGES
+            messenger.send_message(random.choice(IGNORE_MISSING_ARGUMENT_MESSAGES), reply_to_message_id=message_id, msg_type="IGNORE_MISSING_ARGUMENT")
+            return
+            
+        player_name = args[1].strip()
+        from app.helpers import get_player_names_map
+        valid_keys = set(get_player_names_map().values())
+        
+        # We need the keys of the JSON, which are the values in get_player_names_map (the canonical names)
+        # Wait, get_player_names_map returns { "Alias": "Key" }. So values() are the keys in JSON.
+        
+        # Check case-insensitive match against valid keys
+        matched_key = next((k for k in valid_keys if k.lower() == player_name.lower()), None)
+        
+        if not matched_key:
+            from app.messages.ignore import IGNORE_NOT_FOUND_MESSAGES
+            messenger.send_message(random.choice(IGNORE_NOT_FOUND_MESSAGES).format(player_name=player_name), reply_to_message_id=message_id, msg_type="IGNORE_NOT_FOUND")
+            return
+            
+        from app.state_ignore import set_ignore_player
+        from app.messages.ignore import IGNORE_ACTIVATED_MESSAGES
+        set_ignore_player(matched_key)
+        messenger.send_message(random.choice(IGNORE_ACTIVATED_MESSAGES).format(player_name=matched_key), reply_to_message_id=message_id, msg_type="IGNORE_ACTIVATED")
+        return
+
     if text.startswith('/backfill'):
         if text == '/backfill unrestrict':
             if not is_admin:

@@ -18,7 +18,8 @@ class MatchRecord(Serializable, ABC):
         assists: int,
         redeploys: int,
         damage: int,
-        date: str = None
+        date: str = None,
+        ignore_stats: bool = False
     ):
         self.player = Player(
             raw_player_name=raw_player_name.strip() if raw_player_name else ""
@@ -29,6 +30,7 @@ class MatchRecord(Serializable, ABC):
         self.redeploys = redeploys
         self.damage = damage
         self.date = date
+        self.ignore_stats = ignore_stats
 
     @property
     def _serializable_properties(self) -> List[str]:
@@ -38,7 +40,8 @@ class MatchRecord(Serializable, ABC):
             'kills',
             'assists',
             'redeploys',
-            'damage'
+            'damage',
+            'ignore_stats'
         ]
 
 

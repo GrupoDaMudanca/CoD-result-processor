@@ -237,6 +237,31 @@ def process_files(root_path: str) -> List[Match]:
         # Check for duplicates
         if match_exists(match.id):
             logger.info(f'Match {match.id} already exists, skipping.')
+            
+            from app.state_ignore import get_ignore_player, clear_ignore_player
+            ignore_player = get_ignore_player()
+            if ignore_player:
+                from app.helpers import ignore_match_player
+                from app.messages.ignore import IGNORE_RETROACTIVE_APPLIED_MESSAGES, IGNORE_MISSING_PLAYER_MESSAGES
+                
+                if any(record.player.name == ignore_player for record in match.records):
+                    success = ignore_match_player(match.id, ignore_player)
+                    if success and message_id:
+                        messenger.send_message(
+                            random.choice(IGNORE_RETROACTIVE_APPLIED_MESSAGES).format(player_name=ignore_player),
+                            reply_to_message_id=message_id,
+                            msg_type="IGNORE_RETROACTIVE_APPLIED"
+                        )
+                else:
+                    if message_id:
+                        messenger.send_message(
+                            random.choice(IGNORE_MISSING_PLAYER_MESSAGES).format(player_name=ignore_player),
+                            reply_to_message_id=message_id,
+                            msg_type="IGNORE_MISSING_PLAYER"
+                        )
+                clear_ignore_player()
+                continue
+                
             if message_id:
                 messenger.send_message(
                     random.choice(DUPLICATE_MESSAGES),
@@ -244,6 +269,33 @@ def process_files(root_path: str) -> List[Match]:
                     msg_type="DUPLICATE"
                 )
             continue
+            
+        from app.state_ignore import get_ignore_player, clear_ignore_player
+        ignore_player = get_ignore_player()
+        if ignore_player:
+            player_found = False
+            for record in match.records:
+                if record.player.name == ignore_player:
+                    record.ignore_stats = True
+                    player_found = True
+            
+            if player_found:
+                from app.messages.ignore import IGNORE_APPLIED_MESSAGES
+                if message_id:
+                    messenger.send_message(
+                        random.choice(IGNORE_APPLIED_MESSAGES).format(player_name=ignore_player),
+                        reply_to_message_id=message_id,
+                        msg_type="IGNORE_APPLIED"
+                    )
+            else:
+                from app.messages.ignore import IGNORE_MISSING_PLAYER_MESSAGES
+                if message_id:
+                    messenger.send_message(
+                        random.choice(IGNORE_MISSING_PLAYER_MESSAGES).format(player_name=ignore_player),
+                        reply_to_message_id=message_id,
+                        msg_type="IGNORE_MISSING_PLAYER"
+                    )
+            clear_ignore_player()
 
         player_stats = [
             {

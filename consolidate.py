@@ -54,6 +54,9 @@ def consolidate_data():
 
         consolidated_df = combined_df.drop_duplicates(subset=['match_id', 'player_id'], keep='first')
 
+        if 'ignore_stats' in consolidated_df.columns:
+            consolidated_df['ignore_stats'] = consolidated_df['ignore_stats'].fillna(False)
+
         consolidated_df.to_csv(LATEST_OUTPUT_FILE_PATH, index=False)
 
         logger.info(f'Data consolidated and saved to {LATEST_OUTPUT_FILE_PATH}')

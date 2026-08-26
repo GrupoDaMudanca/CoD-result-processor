@@ -36,6 +36,9 @@ def load_data(start_date=None, end_date=None):
         end_period = pd.to_datetime(end_date).to_period('M')
         df = df[(df['parsed_date'].dt.to_period('M') >= start_period) & 
                 (df['parsed_date'].dt.to_period('M') <= end_period)]
+                
+    if 'ignore_stats' in df.columns:
+        df = df[df['ignore_stats'] != True]
     
     return df
 

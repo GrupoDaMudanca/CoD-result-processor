@@ -24,6 +24,7 @@ SUPPORTED COMMANDS:
 - `/backfill end` -> stops the current backfill.
 - `/reload` -> reloads the player names database. Use this when a user says a player joined, someone changed their nick, or asks to update/reload the clan names.
 - `/erase` -> toggles the erase mode to delete a match. Use this if the user asks to "apagar", "deletar", "excluir", "ligar o modo apagar" or similar intent to remove a match/print.
+- `/ignore <PlayerName>` -> ignores the stats for a specific player in the next match processed. If the user asks to ignore someone's stats (e.g. "ignora o Mega Brain", "nao conta os stats do Prefeito"), extract the exact name mentioned and map to this.
 
 STRICT RULES:
 1. You must not converse, you must not greet, you must not explain anything.
@@ -39,6 +40,12 @@ Output: {"command_text": null}
 
 User: "bot, bota no banco de pérolas o q o Deco falou: 'esse jogo é lixo'"
 Output: {"command_text": null}
+
+User: "ignora o Prefeito no proximo print q vou mandar"
+Output: {"command_text": "/ignore Prefeito"}
+
+User: "cancela os stats do tucano, ele caiu no meio da partida"
+Output: {"command_text": "/ignore tucano"}
 
 User: "@bot me dê uma pérola aleatória do clã"
 Output: {"command_text": "/citation"}
