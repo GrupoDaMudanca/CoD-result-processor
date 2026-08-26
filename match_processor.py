@@ -101,7 +101,8 @@ def process_file(image_path: str, date: str = None) -> Match:
         "Disconsider the line showing the squad's total points. "
         "IMPORTANT: Do not confuse 'Eliminações' with 'Kills'. In this game, 'Eliminações' = Kills + Assists. "
         "Therefore, map the column 'Baixas' to the 'kills' field, and completely ignore the 'Eliminações' column. "
-        f"Here is a list of expected player names. If you see a name that closely resembles one of these, please use this EXACT spelling: {possible_names_str}"
+        f"Here is a list of expected player names. If you see a name that has a minor OCR typo or closely resembles one of these, please use this EXACT spelling: {possible_names_str}. "
+        "HOWEVER, do NOT forcefully match completely different names or different players (e.g. 'VictorB' is completely different from 'Victor Augusto'). If it's a different player, output exactly what is on the screen."
     )
 
     result = client.models.generate_content(
@@ -228,6 +229,7 @@ def process_files(root_path: str) -> List[Match]:
             if message_id:
                 messenger.send_message(
                     random.choice(ERASE_INACTIVE_MESSAGES),
+                    reply_to_message_id=message_id,
                     msg_type="ERASE_INACTIVE"
                 )
             continue
