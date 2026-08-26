@@ -173,10 +173,20 @@ def process_files(root_path: str) -> List[Match]:
                         reply_to_message_id=message_id,
                         msg_type="INVALID_IMAGE"
                     )
+                from app.state_ignore import clear_ignore_player
+                from app.state_erase import clear_erase
+                clear_ignore_player()
+                clear_erase()
                 continue
         except Exception as e:
             err_str = str(e)
             logger.error(f"Full Gemini API exception: {err_str}")
+            
+            from app.state_ignore import clear_ignore_player
+            from app.state_erase import clear_erase
+            clear_ignore_player()
+            clear_erase()
+            
             if '429' in err_str or 'ResourceExhausted' in err_str or 'quota' in err_str.lower():
                 logger.warning('Gemini API quota exhausted!')
                 messenger.send_message(

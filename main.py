@@ -99,6 +99,14 @@ def run_daemon():
         except Exception as e:
             logger.error(f"Unexpected error in main loop: {e}")
             try:
+                from app.state_ignore import clear_ignore_player
+                from app.state_erase import clear_erase
+                clear_ignore_player()
+                clear_erase()
+            except Exception as cleanup_e:
+                logger.error(f"Failed to clean up states: {cleanup_e}")
+
+            try:
                 import random
                 from app.messages.system import ERROR_UNEXPECTED_MESSAGES
                 from app.messengers import get_messenger

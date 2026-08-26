@@ -84,16 +84,10 @@ class Match(Serializable, ABC):
 
     @property
     def records(self) -> List[MatchRecord]:
-        records = [
-            self.record1,
-            self.record2,
-            self.record3,
-            self.record4,
-        ]
-
-        valid_records = [record for record in records if record]
-        valid_records.sort(key=lambda r: r.player.name)
-        return valid_records
+        return sorted(
+            [r for r in (self.record1, self.record2, self.record3, self.record4) if r],
+            key=lambda r: (r.player.name or "", r.kills, r.damage, r.score)
+        )
 
     def to_dict(
         self,
