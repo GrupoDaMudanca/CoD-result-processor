@@ -91,7 +91,9 @@ class Match(Serializable, ABC):
             self.record4,
         ]
 
-        return [record for record in records if record]
+        valid_records = [record for record in records if record]
+        valid_records.sort(key=lambda r: r.player.name)
+        return valid_records
 
     def to_dict(
         self,

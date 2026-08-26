@@ -14,7 +14,6 @@ class Player(Serializable, ABC):
     @property
     def _serializable_properties(self) -> List[str]:
         return [
-            'id',
             'name',
         ]
 
