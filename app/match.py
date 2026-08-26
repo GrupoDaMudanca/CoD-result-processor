@@ -40,8 +40,7 @@ class MatchRecord(Serializable, ABC):
             'kills',
             'assists',
             'redeploys',
-            'damage',
-            'ignore_stats'
+            'damage'
         ]
 
 
