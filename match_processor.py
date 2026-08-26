@@ -305,7 +305,7 @@ def process_files(root_path: str) -> List[Match]:
                 'redeploys': record.redeploys,
                 'is_clan_member': record.player.name is not None
             }
-            for record in match.records
+            for record in match.records if not getattr(record, 'ignore_stats', False)
         ]
 
         best_metric = evaluate_best_metric(player_stats)
