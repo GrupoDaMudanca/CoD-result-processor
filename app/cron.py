@@ -187,14 +187,17 @@ def send_monthly_awards():
             first_row = top_df.iloc[0]
             name = first_row['player_name']
             val = 0
-            if key == 'top_kills': val = int(first_row['kills'])
-            elif key == 'top_avg_kills': val = f"{first_row['kill_avg']:.1f}"
+            if key == 'top_mvp': val = f"{first_row['mvp_score']:.1f}"
+            elif key == 'top_sr': val = int(first_row['sr'])
             elif key == 'top_wins': val = int(first_row['wins'])
-            elif key == 'top_high_redeploys': val = f"{first_row['redeploy_avg']:.1f}"
-            elif key == 'top_waste_bullet': val = f"{first_row['damage_avg']:.0f}"
+            elif key == 'top_avg_kills': val = f"{first_row['adj_kill_avg']:.1f}"
+            elif key == 'top_high_redeploys': val = f"{first_row['adj_redeploy_avg']:.1f}"
+            elif key == 'top_soft_puncher': val = f"{first_row['adj_assist_avg']:.1f}"
+            elif key == 'top_score': val = f"{first_row['adj_score_avg']:.0f}"
+            elif key == 'top_lvp': val = f"{first_row['mvp_score']:.1f}"
+            elif key == 'top_waste_bullet': val = f"{first_row['dmg_per_kill']:.0f}"
             elif key == 'top_kill_stealer': val = f"{first_row['dmg_per_kill']:.0f}"
             elif key == 'top_low_redeploys': val = f"{first_row['redeploy_avg']:.1f}"
-            elif key == 'top_soft_puncher': val = f"{first_row['assist_avg']:.1f}"
             elif key == 'top_low_kills': val = f"{first_row['kill_avg']:.1f}"
             
             text_parts.append("- " + template.format(name=name, val=val))
@@ -256,14 +259,17 @@ def send_month_end_hype():
                     first_row = top_df.iloc[0]
                     name = first_row['player_name']
                     val = 0
-                    if key == 'top_kills': val = int(first_row['kills'])
-                    elif key == 'top_avg_kills': val = f"{first_row['kill_avg']:.1f}"
+                    if key == 'top_mvp': val = f"{first_row['mvp_score']:.1f}"
+                    elif key == 'top_sr': val = int(first_row['sr'])
                     elif key == 'top_wins': val = int(first_row['wins'])
-                    elif key == 'top_high_redeploys': val = f"{first_row['redeploy_avg']:.1f}"
-                    elif key == 'top_waste_bullet': val = f"{first_row['damage_avg']:.0f}"
+                    elif key == 'top_avg_kills': val = f"{first_row['adj_kill_avg']:.1f}"
+                    elif key == 'top_high_redeploys': val = f"{first_row['adj_redeploy_avg']:.1f}"
+                    elif key == 'top_soft_puncher': val = f"{first_row['adj_assist_avg']:.1f}"
+                    elif key == 'top_score': val = f"{first_row['adj_score_avg']:.0f}"
+                    elif key == 'top_lvp': val = f"{first_row['mvp_score']:.1f}"
+                    elif key == 'top_waste_bullet': val = f"{first_row['dmg_per_kill']:.0f}"
                     elif key == 'top_kill_stealer': val = f"{first_row['dmg_per_kill']:.0f}"
                     elif key == 'top_low_redeploys': val = f"{first_row['redeploy_avg']:.1f}"
-                    elif key == 'top_soft_puncher': val = f"{first_row['assist_avg']:.1f}"
                     elif key == 'top_low_kills': val = f"{first_row['kill_avg']:.1f}"
                     
                     text_parts.append("- " + template.format(name=name, val=val))

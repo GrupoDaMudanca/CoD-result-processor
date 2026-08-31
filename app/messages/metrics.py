@@ -512,3 +512,57 @@ KILL_STEALER_MESSAGES = [
     lambda name: f"A única mira afiada que o {name} tem é a de saber exatamente o momento de roubar o abate. Timing perfeito de ladrão! ⏱️🐀",
     lambda name: f"O {name} tá sendo investigado por formação de quadrilha, porque roubar desse jeito sozinho é impossível, tem esquema aí! 🕵️‍♂️🚓",
 ]
+
+MATCH_MVP_MESSAGES = [
+    lambda name: f"O quiropraxista mandou avisar que as costas do {name} vão precisar de massagem amanhã! MVP! 🏆👑",
+    lambda name: f"Simplesmente a coluna vertebral do esquadrão. {name} botou a partida no bolso! 🎒🔥",
+    lambda name: f"Inacreditável a gameplay do {name}. O homem tá possuído! MVP do jogo! 👹🔫",
+    lambda name: f"Avisem pros inimigos que hoje o {name} não tava pra brincadeira! Brabo demais! 🥇💀",
+    lambda name: f"O {name} sozinho fez mais que o exército inteiro. Carregou com força! 💪🦅",
+    lambda name: f"Lutou por todos! O {name} garantiu a nota mais alta da partida. MVP incontestável! 🎖️📈",
+    lambda name: f"Se o {name} fosse um carro, seria uma Ferrari sem freio! Atropelou geral e levou o MVP! 🏎️💨",
+    lambda name: f"Alguém anotou a placa? O {name} passou por cima do lobby inteiro! MVP absoluto! 🚜💥",
+    lambda name: f"O {name} tava jogando contra bots? Porque pareceu fácil demais! MVP brabíssimo! 🤖🔥",
+    lambda name: f"MVP pro {name}! O cara fez chover no mapa, o verdadeiro pesadelo do inimigo! ⛈️👻",
+    lambda name: f"Não adianta se esconder, o {name} acha e amassa! Mais um MVP pra conta da lenda! 🕵️‍♂️💀",
+    lambda name: f"O {name} é a definição de 'um homem, uma máquina, uma besta enjaulada'! MVP merecido! 🐺⛓️",
+    lambda name: f"Fica até chato pros inimigos... O {name} monopolizou a partida e guardou o MVP no bolso! 🥱💼",
+    lambda name: f"MVP com louvor! O {name} entrou no modo John Wick e não perdoou ngm! 🐶🔫",
+    lambda name: f"A precisão do {name} assusta. Parecia que tava de hack, mas é só talento mesmo! MVP! 🎯🧠",
+]
+
+MATCH_LVP_MESSAGES = [
+    lambda name: f"Obrigado {name} por atuar como escudo humano enquanto os adultos resolviam a partida! LVP da rodada. 💩🤡",
+    lambda name: f"Mais peso morto que a mochila do {name}, impossível. Faz favor de não fazer mais isso! 🗑️👎",
+    lambda name: f"O {name} tem a mesma utilidade de um bot crashado. Foi o saco de pancadas da vez! 🥊🤖",
+    lambda name: f"Se a gente quisesse jogar com um a menos, nem convidava o {name}. LVP merecido! 🚮💀",
+    lambda name: f"A performance do {name} deu inveja num cone de trânsito. O verdadeiro Peso Morto! 🚧📉",
+    lambda name: f"Tropeçou na própria arma e afundou o time. {name} foi a pior nota da partida! ⚓🗑️",
+    lambda name: f"O {name} entrou no jogo só pra bater ponto e ir embora. LVP sem vontade nenhuma! ⏰😴",
+    lambda name: f"A única coisa que o {name} matou na partida foi a nossa paciência. LVP inquestionável! 🧘‍♂️😡",
+    lambda name: f"O {name} jogou com o monitor desligado? Não tem outra explicação pra esse LVP! 📺🦯",
+    lambda name: f"Ganhamos APESAR do {name}. O cara foi praticamente um agente duplo do inimigo! 🕵️‍♂️🤡",
+    lambda name: f"O LVP de hoje vai pro {name}, que provou que é possível jogar Warzone como um pacifista! 🕊️✌️",
+    lambda name: f"Se o {name} fosse um soldado de verdade, tinha atirado no próprio pé. LVP desastroso! 🦶💥",
+    lambda name: f"O {name} fez menos estrago que uma arminha de água. Inofensivo e levou o LVP! 🔫💧",
+    lambda name: f"A gameplay do {name} foi uma aula... de como NÃO jogar Warzone! LVP com maestria na ruindade! 👨‍🏫📉",
+    lambda name: f"O {name} tava jogando no controle sem pilha? O verdadeiro Peso Morto da partida! 🎮🔋",
+]
+
+HIGH_SCORE_MESSAGES = [
+    lambda name: f"Alguém avisa o {name} que isso é jogo de tiro e não Banco Imobiliário. O cara só abriu caixa o jogo inteiro! 💰🏦",
+    lambda name: f"O {name} é o verdadeiro contador do time. Loot, contrato e zero tiro! Rei do Score! 📈🛒",
+    lambda name: f"Se precisar abrir um CNPJ no Warzone, chama o {name}! O cara faturou o maior score looteando! 💼💸",
+    lambda name: f"Arma pra que? O {name} ganha jogo na base do contrato de caçada e caixa de suprimento! 📦💸",
+    lambda name: f"O {name} fez um curso no Sebrae antes de jogar. Maior score só administrando loot! 👔📊",
+    lambda name: f"Enquanto a gente atirava, o {name} tava abrindo a 50ª caixa azul da partida. Score nas alturas! 📘🔓",
+    lambda name: f"O {name} é o Tio Patinhas do Warzone. Ninguém acumulou tanto dinheiro e score quanto ele! 🦆💵",
+    lambda name: f"Score altíssimo pro {name}! O cara tratou a ressurgência como simulador de catador de lixo! ♻️🗑️",
+    lambda name: f"O {name} não deu um tiro, mas fez tanto contrato que o Serasa mandou carta de elogio. Rei do Score! 📜🏦",
+    lambda name: f"A gameplay do {name} foi no modo The Sims: só juntando grana e mobiliando a mochila. Alto Score! 🏡💰",
+    lambda name: f"O CEO da partida foi o {name}. Não sujou as mãos, mas liderou as planilhas de Score! 📈👑",
+    lambda name: f"O {name} é o garoto de recados de Urzikstan. Fez todos os contratos e garantiu o maior Score! 🏃‍♂️📝",
+    lambda name: f"Score monstro! O {name} tem o dom de transformar caixa de munição e contrato em ponto na tabela! 📈🎩",
+    lambda name: f"Se precisar declarar o imposto de renda, passa pro {name}. O cara é máquina de fazer score e lootear! 🧾💼",
+    lambda name: f"O {name} não carrega munição, carrega boleto! Maior Score focado no empreendedorismo! 💼🤑",
+]

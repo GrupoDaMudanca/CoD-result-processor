@@ -7,6 +7,9 @@ from app.metrics.high_redeploys import HighQuantityRedeploys
 from app.metrics.soft_puncher import SoftPuncher
 from app.metrics.kill_stealer import KillStealer
 from app.metrics.low_redeploys import LowQuantityRedeploys
+from app.metrics.match_mvp import MatchMVP
+from app.metrics.match_lvp import MatchLVP
+from app.metrics.high_score import HighScore
 
 ALL_METRICS = [
     LowQtdKills(),
@@ -15,6 +18,9 @@ ALL_METRICS = [
     SoftPuncher(),
     KillStealer(),
     LowQuantityRedeploys(),
+    MatchMVP(),
+    MatchLVP(),
+    HighScore(),
 ]
 
 

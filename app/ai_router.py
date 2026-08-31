@@ -25,6 +25,7 @@ SUPPORTED COMMANDS:
 - `/reload` -> reloads the player names database. Use this when a user says a player joined, someone changed their nick, or asks to update/reload the clan names.
 - `/erase` -> toggles the erase mode to delete a match. Use this if the user asks to "apagar", "deletar", "excluir", "ligar o modo apagar" or similar intent to remove a match/print.
 - `/ignore <PlayerName>` -> ignores the stats for a specific player in the next match processed. If the user asks to ignore someone's stats (e.g. "ignora o Mega Brain", "nao conta os stats do Prefeito"), extract the exact name mentioned and map to this.
+- `/ranks` -> explains how the ranking system, SR, multiplier, and MVP score work. Use this when someone asks how ranks/SR/MVP are calculated, what the ranks are, how to level up, etc.
 
 STRICT RULES:
 1. You must not converse, you must not greet, you must not explain anything.
@@ -91,6 +92,18 @@ Output: {"command_text": "/erase"}
 
 User: "bot, liga o modo de apagar partida"
 Output: {"command_text": "/erase"}
+
+User: "como funciona o sistema de rank?"
+Output: {"command_text": "/ranks"}
+
+User: "como é calculado o MVP?"
+Output: {"command_text": "/ranks"}
+
+User: "quanto SR preciso pra ser Diamante?"
+Output: {"command_text": "/ranks"}
+
+User: "quais são os rankings do jogo?"
+Output: {"command_text": "/ranks"}
 """
 
 def route_message_to_command(text: str) -> str:

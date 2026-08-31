@@ -243,6 +243,10 @@ def handle_command(text: str, message_id: str, from_id: str, chat_id: str, is_ad
             set_erase()
             messenger.send_message(random.choice(ERASE_ACTIVE_MESSAGES), reply_to_message_id=message_id, msg_type="ERASE_ACTIVE")
 
+    elif text.startswith('/ranks'):
+        from app.messages.ranks import RANKS_INFO_MESSAGE
+        messenger.send_message(RANKS_INFO_MESSAGE, reply_to_message_id=message_id, msg_type="RANKS_INFO")
+
     elif text.startswith('/'):
         # Log unexpected commands if needed
         pass

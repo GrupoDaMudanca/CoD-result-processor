@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 from config import LATEST_OUTPUT_FILE_PATH, PLAYER_NAMES_FILE_PATH, RESULT_FILES_PATH
 
 from app.objectives import calculate_objectives, OBJECTIVE_KEYS
+from app.rank_system import calculate_sr_and_rank
 
 from pandas.errors import EmptyDataError
 
@@ -41,8 +42,8 @@ def load_data(start_date=None, end_date=None):
         df = df[df['ignore_stats'] != True]
     
     return df
-
-def get_monthly_highlights(df):
+    
+def get_monthly_highlights(df, player_monthly_sr, total_objs_dict):
     """Calculates and returns the top players for each category."""
     player_stats = df.groupby('player_name').agg(
         wins=('match_id', 'nunique'),
@@ -52,23 +53,83 @@ def get_monthly_highlights(df):
         redeploys=('redeploys', 'sum') if 'redeploys' in df.columns else ('kills', 'sum')
     ).reset_index()
 
+    player_stats['objectives'] = player_stats['player_name'].map(lambda x: total_objs_dict.get(x, 0))
+
+    # Calculate basic averages
     player_stats['kill_avg'] = player_stats['kills'] / player_stats['wins']
     player_stats['damage_avg'] = player_stats['damage'] / player_stats['wins']
-    player_stats = player_stats.sort_values(by='kills', ascending=False)
     player_stats['redeploy_avg'] = player_stats.get('redeploys', player_stats['kills']) / player_stats['wins']
     player_stats['assist_avg'] = player_stats['assists'] / player_stats['wins']
+    
+    # We now calculate damage per kill strictly (fixing waste_bullet)
     player_stats['dmg_per_kill'] = player_stats['damage'] / player_stats['kills'].replace(0, 1)
+
+    # Score (if not in df, default to 0)
+    if 'score' in df.columns:
+        score_df = df.groupby('player_name')['score'].sum().reset_index()
+        player_stats = player_stats.merge(score_df, on='player_name', how='left')
+        player_stats['score'] = player_stats['score'].fillna(0)
+    else:
+        player_stats['score'] = 0
+    player_stats['score_avg'] = player_stats['score'] / player_stats['wins']
+
+    # Apply Multi-month SR and Multiplier
+    # The multiplier is based on the Average SR across all active months (or just the period months)
+    # The Rank is the PEAK rank achieved in any month
+    num_months = df['parsed_date'].dt.to_period('M').nunique() if 'parsed_date' in df.columns else 1
+    if num_months == 0:
+        num_months = 1
+
+    def get_aggregated_sr(player):
+        monthly_data = player_monthly_sr.get(player, [])
+        if not monthly_data:
+            return 500, "🥉 Bronze", 0.5
+        
+        # Peak rank is the one with the highest SR
+        peak_entry = max(monthly_data, key=lambda x: x[0])
+        peak_rank = peak_entry[1]
+        
+        # Average SR across all months in the period
+        # If they didn't play in a month, their SR for that month is 500.
+        played_months_sr_sum = sum(x[0] for x in monthly_data)
+        missed_months = num_months - len(monthly_data)
+        
+        avg_sr = (played_months_sr_sum + (missed_months * 500)) / num_months
+        avg_mult = avg_sr / 1000.0
+        
+        return avg_sr, peak_rank, avg_mult
+
+    sr_data = player_stats['player_name'].apply(get_aggregated_sr)
+    player_stats['sr'] = [x[0] for x in sr_data]
+    player_stats['rank'] = [x[1] for x in sr_data]
+    player_stats['multiplier'] = [x[2] for x in sr_data]
+
+    # Calculate Base Performance Score and MVP
+    player_stats['base_score'] = (player_stats['kill_avg'] * 10) + (player_stats['assist_avg'] * 5) + (player_stats['redeploy_avg'] * 5) + (player_stats['damage_avg'] / 100)
+    player_stats['mvp_score'] = player_stats['base_score'] * player_stats['multiplier']
+
+    # Asymmetrical Rule: Positive metrics multiplied, Negative metrics pure (no multiplier)
+    player_stats['adj_kill_avg'] = player_stats['kill_avg'] * player_stats['multiplier']
+    player_stats['adj_redeploy_avg'] = player_stats['redeploy_avg'] * player_stats['multiplier']
+    player_stats['adj_assist_avg'] = player_stats['assist_avg'] * player_stats['multiplier']
+    player_stats['adj_score_avg'] = player_stats['score_avg'] * player_stats['multiplier']
+
+    player_stats = player_stats.sort_values(by='mvp_score', ascending=False)
 
     return {
         'player_stats': player_stats,
-        'top_kills': player_stats.nlargest(3, 'kills'),
-        'top_avg_kills': player_stats.nlargest(3, 'kill_avg'),
+        'top_mvp': player_stats.nlargest(3, 'mvp_score'),
+        'top_sr': player_stats.nlargest(3, 'sr'),
         'top_wins': player_stats.nlargest(3, 'wins'),
-        'top_high_redeploys': player_stats.nlargest(3, 'redeploy_avg'),
-        'top_waste_bullet': player_stats.nlargest(3, 'damage_avg'),
+        'top_avg_kills': player_stats.nlargest(3, 'adj_kill_avg'),
+        'top_high_redeploys': player_stats.nlargest(3, 'adj_redeploy_avg'),
+        'top_soft_puncher': player_stats.nlargest(3, 'adj_assist_avg'),
+        'top_score': player_stats.nlargest(3, 'adj_score_avg'),
+        
+        'top_lvp': player_stats.nsmallest(3, 'mvp_score'),
+        'top_waste_bullet': player_stats.nlargest(3, 'dmg_per_kill'),
         'top_kill_stealer': player_stats.nsmallest(3, 'dmg_per_kill'),
         'top_low_redeploys': player_stats.nsmallest(3, 'redeploy_avg'),
-        'top_soft_puncher': player_stats.nlargest(3, 'assist_avg'),
         'top_low_kills': player_stats.nsmallest(3, 'kill_avg')
     }
 def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
@@ -89,9 +150,41 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     with open(PLAYER_NAMES_FILE_PATH, 'r') as f:
         clan_mapping = json.load(f)
     valid_clan_names = list(clan_mapping.keys())
+
+    # Multi-month objective and SR calculation
+    months = df['parsed_date'].dt.to_period('M').unique() if 'parsed_date' in df.columns else [None]
+    player_monthly_sr = {}
+    total_objs_dict = {p: 0 for p in valid_clan_names}
     
-    # Pass the full df (including non-clan members) to objectives for accurate squad kills
-    objs_list = calculate_objectives(df, valid_clan_names)
+    # Calculate per-month SR to get Peak Rank and Avg SR
+    for month in months:
+        month_df = df[df['parsed_date'].dt.to_period('M') == month] if month is not None else df
+        if month_df.empty:
+            continue
+            
+        objs_list_month = calculate_objectives(month_df, valid_clan_names)
+        obj_dict_month = {p['player_name']: p['total_completed'] for p in objs_list_month}
+        
+        wins_month = month_df[month_df['player_name'].isin(valid_clan_names)].groupby('player_name')['match_id'].nunique()
+        
+        for player in valid_clan_names:
+            w = wins_month.get(player, 0)
+            o = obj_dict_month.get(player, 0)
+            
+            # Record monthly SR for peak calculation
+            if w > 0 or o > 0:
+                sr, rank, mult = calculate_sr_and_rank(w, o)
+                if player not in player_monthly_sr:
+                    player_monthly_sr[player] = []
+                player_monthly_sr[player].append((sr, rank, mult))
+
+    # Calculate overall objectives for the UI over the entire period BEFORE filtering out non-clan members
+    objs_list_ui = calculate_objectives(df, valid_clan_names)
+    played_players = df[df['player_name'].isin(valid_clan_names)]['player_name'].unique()
+    objs_list = [p for p in objs_list_ui if p['player_name'] in played_players]
+    objs_list.sort(key=lambda x: x['total_completed'], reverse=True)
+    
+    total_objs_dict = {p['player_name']: p['total_completed'] for p in objs_list}
 
     # Filter to only clan members for the rest of the dashboard
     df = df[df['player_name'].isin(valid_clan_names)]
@@ -104,20 +197,28 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     total_plays = df['match_id'].nunique()
     total_kills = int(df['kills'].sum())
 
-    highlights = get_monthly_highlights(df)
+    highlights = get_monthly_highlights(df, player_monthly_sr, total_objs_dict)
     player_stats = highlights['player_stats']
+    num_months = len([m for m in months if m is not None]) or 1
 
-    total_kills_list = [(r['player_name'], str(int(r['kills']))) for _, r in highlights['top_kills'].iterrows()]
-    avg_kills_list = [(r['player_name'], f"{r['kill_avg']:.1f}") for _, r in highlights['top_avg_kills'].iterrows()]
+    # Formatter helpers
+    def format_val(df_subset, key, fmt_str="{:.1f}"):
+        return [(r['player_name'], fmt_str.format(r[key])) for _, r in df_subset.iterrows()]
+
+    mvp_list = format_val(highlights['top_mvp'], 'mvp_score')
+    sr_list = [(r['player_name'], str(int(r['sr']))) for _, r in highlights['top_sr'].iterrows()]
     wins_list = [(r['player_name'], str(int(r['wins']))) for _, r in highlights['top_wins'].iterrows()]
-    high_redeploys_list = [(r['player_name'], f"{r['redeploy_avg']:.1f}") for _, r in highlights['top_high_redeploys'].iterrows()]
-    waste_bullet_list = [(r['player_name'], f"{r['damage_avg']:.0f}") for _, r in highlights['top_waste_bullet'].iterrows()]
-    kill_stealer_list = [(r['player_name'], f"{r['dmg_per_kill']:.0f}") for _, r in highlights['top_kill_stealer'].iterrows()]
-    low_redeploys_list = [(r['player_name'], f"{r['redeploy_avg']:.1f}") for _, r in highlights['top_low_redeploys'].iterrows()]
-    soft_puncher_list = [(r['player_name'], f"{r['assist_avg']:.1f}") for _, r in highlights['top_soft_puncher'].iterrows()]
-    low_kills_list = [(r['player_name'], f"{r['kill_avg']:.1f}") for _, r in highlights['top_low_kills'].iterrows()]
-    total_plays = df['match_id'].nunique()
-    total_kills = int(df['kills'].sum())
+    avg_kills_list = format_val(highlights['top_avg_kills'], 'adj_kill_avg')
+    high_redeploys_list = format_val(highlights['top_high_redeploys'], 'adj_redeploy_avg')
+    soft_puncher_list = format_val(highlights['top_soft_puncher'], 'adj_assist_avg')
+    score_list = format_val(highlights['top_score'], 'adj_score_avg', "{:.0f}")
+
+    lvp_list = format_val(highlights['top_lvp'], 'mvp_score')
+    waste_bullet_list = format_val(highlights['top_waste_bullet'], 'dmg_per_kill', "{:.0f}")
+    kill_stealer_list = format_val(highlights['top_kill_stealer'], 'dmg_per_kill', "{:.0f}")
+    low_redeploys_list = format_val(highlights['top_low_redeploys'], 'redeploy_avg')
+    low_kills_list = format_val(highlights['top_low_kills'], 'kill_avg')
+
     avg_kills = total_kills / total_plays if total_plays > 0 else 0
 
 
@@ -126,12 +227,15 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     # ------------------
     # Dynamic Layout Calculation
     # ------------------
-    num_players = len(player_stats)
+    num_players_tbl = len(player_stats)
+    num_players_obj = len(objs_list)
     
     # Define heights in "inches"
-    H_top = 5.0
-    H_obj = 1.5 + (num_players * 0.35)
-    H_tbl = 1.0 + (num_players * 0.35)
+    H_obj = 1.5 + (num_players_obj * 0.35)
+    H_tbl = 1.0 + (num_players_tbl * 0.35)
+    
+    # We now have 3 rows of highlights instead of 2. Make H_top larger.
+    H_top = 6.5
     H_margin = 0.5
     
     H_total = H_top + H_obj + H_tbl + H_margin
@@ -148,6 +252,7 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     # Plotting
     # ------------------
     plt.style.use('dark_background')
+    plt.rcParams['font.family'] = ['DejaVu Sans', 'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji']
     fig, ax = plt.subplots(figsize=(W_total, H_total))
     fig.patch.set_facecolor('#1a1a2e')
     ax.set_facecolor('#1a1a2e')
@@ -189,7 +294,7 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
 
     # Background Box for Highlights
     hl_top_inch = 1.3
-    hl_bottom_inch = 4.8
+    hl_bottom_inch = 6.3  # Increased for 3 rows
     hl_box = FancyBboxPatch((0.03, y_pct(hl_bottom_inch)), 0.94, (hl_bottom_inch - hl_top_inch) / H_total, 
                          boxstyle="round,pad=0.02,rounding_size=0.03", mutation_aspect=W_total/H_total,
                          ec="none", fc="#16213e", transform=ax.transAxes)
@@ -197,20 +302,30 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     
     plt.text(0.05, y_pct(hl_top_inch + 0.3), "Ressurgence Highlights", color="#e94560", fontsize=16, fontweight='bold', ha='left', va='center', transform=ax.transAxes)
 
-    x_cols_hl = [0.05, 0.24, 0.43, 0.62, 0.81]
+    # We will use 4 columns, 3 rows
+    x_cols_hl = [0.05, 0.28, 0.51, 0.74]
     y_hl_r1 = hl_top_inch + 0.8
     y_hl_r2 = hl_top_inch + 2.3
+    y_hl_r3 = hl_top_inch + 3.8
 
-    draw_highlight_col(x_cols_hl[0], y_hl_r1, "Total Kills", total_kills_list)
-    draw_highlight_col(x_cols_hl[1], y_hl_r1, "Avg Kills", avg_kills_list)
-    draw_highlight_col(x_cols_hl[2], y_hl_r1, "Wins", wins_list)
-    draw_highlight_col(x_cols_hl[3], y_hl_r1, "Highlander", high_redeploys_list)
-    draw_highlight_col(x_cols_hl[4], y_hl_r1, "Gasta Bala", waste_bullet_list)
+    # Prestige Row 1
+    draw_highlight_col(x_cols_hl[0], y_hl_r1, "MVP", mvp_list)
+    draw_highlight_col(x_cols_hl[1], y_hl_r1, "O General (SR)", sr_list)
+    draw_highlight_col(x_cols_hl[2], y_hl_r1, "Vencedor Nato", wins_list)
+    draw_highlight_col(x_cols_hl[3], y_hl_r1, "O Exterminador", avg_kills_list)
 
-    draw_highlight_col(x_cols_hl[0], y_hl_r2, "Rouba Kill", kill_stealer_list)
-    draw_highlight_col(x_cols_hl[1], y_hl_r2, "Neymar", low_redeploys_list)
-    draw_highlight_col(x_cols_hl[2], y_hl_r2, "Atira Fofo", soft_puncher_list)
-    draw_highlight_col(x_cols_hl[3], y_hl_r2, "Tadinho", low_kills_list)
+    # Prestige Row 2
+    draw_highlight_col(x_cols_hl[0], y_hl_r2, "Highlander", high_redeploys_list)
+    draw_highlight_col(x_cols_hl[1], y_hl_r2, "Atira Fofo", soft_puncher_list)
+    draw_highlight_col(x_cols_hl[2], y_hl_r2, "Contratos", score_list)
+    
+    # Mockery Row 3 (starts at column 3 of Row 2)
+    draw_highlight_col(x_cols_hl[3], y_hl_r2, "LVP", lvp_list)
+    
+    draw_highlight_col(x_cols_hl[0], y_hl_r3, "Gasta Bala", waste_bullet_list)
+    draw_highlight_col(x_cols_hl[1], y_hl_r3, "Rouba Kill", kill_stealer_list)
+    draw_highlight_col(x_cols_hl[2], y_hl_r3, "Neymar", low_redeploys_list)
+    draw_highlight_col(x_cols_hl[3], y_hl_r3, "Tadinho", low_kills_list)
 
 
     # ------------------
@@ -254,13 +369,15 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     # ------------------
     y_tbl_start_inch = obj_bottom_inch + 0.8
     
-    headers = ["Atleta", "Wins", "Kill Avg", "Kills", "Assists", "Redeploys", "Damage Avg", "Damage"]
-    x_cols = [0.05, 0.18, 0.30, 0.42, 0.54, 0.66, 0.80, 0.95]
-    aligns = ['left', 'center', 'center', 'center', 'center', 'center', 'center', 'right']
+    rank_col_label = "Rank" if num_months <= 1 else "Melhor Rank"
+    headers = ["Atleta", rank_col_label, "SR", "Avg Mult", "MVP", "Wins", "Kill Avg", "Kills", "Assists", "Redepl", "Dmg"]
+    # 11 columns — squeeze a bit to fit SR between Rank and Mult
+    x_cols = [0.05, 0.17, 0.275, 0.34, 0.41, 0.48, 0.545, 0.625, 0.715, 0.82, 0.95]
+    aligns = ['left', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'center', 'right']
 
     # Header
     for idx, (h_text, x_pos, align) in enumerate(zip(headers, x_cols, aligns)):
-        plt.text(x_pos, y_pct(y_tbl_start_inch), h_text, color="#ffb86c", fontsize=12, fontweight='bold', ha=align, va='center', transform=ax.transAxes)
+        plt.text(x_pos, y_pct(y_tbl_start_inch), h_text, color="#ffb86c", fontsize=11, fontweight='bold', ha=align, va='center', transform=ax.transAxes)
     
     plt.plot([0.05, 0.95], [y_pct(y_tbl_start_inch + 0.25), y_pct(y_tbl_start_inch + 0.25)], color="#a0a0b0", lw=1, transform=ax.transAxes)
 
@@ -268,16 +385,18 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     y_row_inch = y_tbl_start_inch + 0.65
     for i, row in player_stats.iterrows():
         dmg_str = f"{row['damage']/1000:.1f}k" if row['damage'] >= 1000 else str(int(row['damage']))
-        dmg_avg_str = f"{row['damage_avg']:.0f}"
         
         row_vals = [
             str(row['player_name']),
+            str(row['rank']),
+            f"{row['sr']:.0f}",
+            f"x{row['multiplier']:.2f}",
+            f"{row['mvp_score']:.1f}",
             str(int(row['wins'])),
             f"{row['kill_avg']:.1f}",
             str(int(row['kills'])),
             str(int(row['assists'])),
             str(int(row.get('redeploys', 0))),
-            dmg_avg_str,
             dmg_str
         ]
         
@@ -287,7 +406,36 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
             ax.add_patch(band)
             
         for idx, (val, x_pos, align) in enumerate(zip(row_vals, x_cols, aligns)):
-            plt.text(x_pos, y_pct(y_row_inch), val, color="white", fontsize=11, ha=align, va='center', transform=ax.transAxes)
+            if idx == 1:
+                import matplotlib.image as mpimg
+                from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+                # Translate PT rank name → EN filename
+                PT_TO_EN = {
+                    "Bronze": "Bronze", "Prata": "Silver", "Ouro": "Gold",
+                    "Platina": "Platinum", "Diamante": "Diamond",
+                    "Carmesim": "Crimson", "Iridescente": "Iridescent"
+                }
+                parts = val.split(' ')
+                en_base = PT_TO_EN.get(parts[0], parts[0])
+                en_val = ' '.join([en_base] + parts[1:])
+                badge_filename = en_val.replace(' ', '_') + '.png'
+                badge_path = os.path.join('assets', 'badges', badge_filename)
+                
+                try:
+                    img = mpimg.imread(badge_path)
+                    imagebox = OffsetImage(img, zoom=0.16)  # smaller zoom to avoid row overlap
+                    imagebox.image.axes = ax
+                    
+                    ab = AnnotationBbox(imagebox, (x_pos, y_pct(y_row_inch)),
+                                        frameon=False,
+                                        xycoords='axes fraction',
+                                        box_alignment=(0.5, 0.5))
+                    ax.add_artist(ab)
+                except Exception as e:
+                    print(f"Error loading {badge_filename}: {e}")
+                    plt.text(x_pos, y_pct(y_row_inch), val, color="white", fontsize=11, ha=align, va='center', transform=ax.transAxes)
+            else:
+                plt.text(x_pos, y_pct(y_row_inch), val, color="white", fontsize=11, ha=align, va='center', transform=ax.transAxes)
             
         y_row_inch += 0.35
 
@@ -297,7 +445,7 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     return output_path
 
 if __name__ == '__main__':
-    # For local testing
-    path = generate_dashboard_image(target_year=2026, target_month=5)
+    # For local testing - August 2026
+    path = generate_dashboard_image(start_date=datetime(2026, 8, 1), end_date=datetime(2026, 8, 31))
     if path:
         print(f"Dashboard generated at {path}")
