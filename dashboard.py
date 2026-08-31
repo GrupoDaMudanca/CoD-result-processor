@@ -8,7 +8,9 @@ from matplotlib.patches import FancyBboxPatch
 import logging
 from datetime import datetime
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+logging.getLogger('matplotlib.font_manager').setLevel(logging.ERROR)
 
 from config import LATEST_OUTPUT_FILE_PATH, PLAYER_NAMES_FILE_PATH, RESULT_FILES_PATH
 
@@ -252,7 +254,7 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     # Plotting
     # ------------------
     plt.style.use('dark_background')
-    plt.rcParams['font.family'] = ['DejaVu Sans', 'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji']
+    plt.rcParams['font.family'] = ['DejaVu Sans']
     fig, ax = plt.subplots(figsize=(W_total, H_total))
     fig.patch.set_facecolor('#1a1a2e')
     ax.set_facecolor('#1a1a2e')
@@ -317,7 +319,7 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     # Prestige Row 2
     draw_highlight_col(x_cols_hl[0], y_hl_r2, "Highlander", high_redeploys_list)
     draw_highlight_col(x_cols_hl[1], y_hl_r2, "Atira Fofo", soft_puncher_list)
-    draw_highlight_col(x_cols_hl[2], y_hl_r2, "Contratos", score_list)
+    draw_highlight_col(x_cols_hl[2], y_hl_r2, "Contador", score_list)
     
     # Mockery Row 3 (starts at column 3 of Row 2)
     draw_highlight_col(x_cols_hl[3], y_hl_r2, "LVP", lvp_list)

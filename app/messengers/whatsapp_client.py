@@ -68,6 +68,8 @@ class WhatsAppClient(MessengerClient):
                 options["caption"] = caption
             if reply_to_message_id:
                 options["quotedMessageId"] = reply_to_message_id
+                
+            options["sendMediaAsHd"] = True
             
             if options:
                 payload["options"] = options
