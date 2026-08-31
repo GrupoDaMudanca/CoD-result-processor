@@ -35,15 +35,60 @@ def load_data(start_date=None, end_date=None):
     
     if 'date' in df.columns:
         df['parsed_date'] = pd.to_datetime(df['date'], format='%d/%m/%Y', errors='coerce')
-        start_period = pd.to_datetime(start_date).to_period('M')
-        end_period = pd.to_datetime(end_date).to_period('M')
-        df = df[(df['parsed_date'].dt.to_period('M') >= start_period) & 
-                (df['parsed_date'].dt.to_period('M') <= end_period)]
+        start_period = pd.to_datetime(start_date).tz_localize(None).to_period('M')
+        end_period = pd.to_datetime(end_date).tz_localize(None).to_period('M')
+        df = df[(df['parsed_date'].dt.tz_localize(None).dt.to_period('M') >= start_period) & 
+                (df['parsed_date'].dt.tz_localize(None).dt.to_period('M') <= end_period)]
                 
     if 'ignore_stats' in df.columns:
         df = df[df['ignore_stats'] != True]
     
     return df
+    
+def get_highlights_for_period(start_date, end_date):
+    """Loads data for a period, calculates objectives and SR, and returns highlights."""
+    df = load_data(start_date, end_date)
+    if df.empty:
+        return None
+        
+    with open(PLAYER_NAMES_FILE_PATH, 'r') as f:
+        clan_mapping = json.load(f)
+    valid_clan_names = list(clan_mapping.keys())
+
+    months = df['parsed_date'].dt.tz_localize(None).dt.to_period('M').unique() if 'parsed_date' in df.columns else [None]
+    player_monthly_sr = {}
+    
+    for month in months:
+        month_df = df[df['parsed_date'].dt.tz_localize(None).dt.to_period('M') == month] if month is not None else df
+        if month_df.empty:
+            continue
+            
+        objs_list_month = calculate_objectives(month_df, valid_clan_names)
+        obj_dict_month = {p['player_name']: p['total_completed'] for p in objs_list_month}
+        wins_month = month_df[month_df['player_name'].isin(valid_clan_names)].groupby('player_name')['match_id'].nunique()
+        
+        for player in valid_clan_names:
+            w = wins_month.get(player, 0)
+            o = obj_dict_month.get(player, 0)
+            if w > 0 or o > 0:
+                sr, rank, mult = calculate_sr_and_rank(w, o)
+                if player not in player_monthly_sr:
+                    player_monthly_sr[player] = []
+                player_monthly_sr[player].append((sr, rank, mult))
+
+    objs_list_ui = calculate_objectives(df, valid_clan_names)
+    played_players = df[df['player_name'].isin(valid_clan_names)]['player_name'].unique()
+    objs_list = [p for p in objs_list_ui if p['player_name'] in played_players]
+    objs_list.sort(key=lambda x: x['total_completed'], reverse=True)
+    
+    total_objs_dict = {p['player_name']: p['total_completed'] for p in objs_list}
+
+    df = df[df['player_name'].isin(valid_clan_names)]
+    if df.empty:
+        return None
+        
+    highlights = get_monthly_highlights(df, player_monthly_sr, total_objs_dict)
+    return df, highlights, player_monthly_sr, total_objs_dict, months, objs_list
     
 def get_monthly_highlights(df, player_monthly_sr, total_objs_dict):
     """Calculates and returns the top players for each category."""
@@ -78,7 +123,7 @@ def get_monthly_highlights(df, player_monthly_sr, total_objs_dict):
     # Apply Multi-month SR and Multiplier
     # The multiplier is based on the Average SR across all active months (or just the period months)
     # The Rank is the PEAK rank achieved in any month
-    num_months = df['parsed_date'].dt.to_period('M').nunique() if 'parsed_date' in df.columns else 1
+    num_months = df['parsed_date'].dt.tz_localize(None).dt.to_period('M').nunique() if 'parsed_date' in df.columns else 1
     if num_months == 0:
         num_months = 1
 
@@ -113,8 +158,6 @@ def get_monthly_highlights(df, player_monthly_sr, total_objs_dict):
     # Asymmetrical Rule: Positive metrics multiplied, Negative metrics pure (no multiplier)
     player_stats['adj_kill_avg'] = player_stats['kill_avg'] * player_stats['multiplier']
     player_stats['adj_redeploy_avg'] = player_stats['redeploy_avg'] * player_stats['multiplier']
-    player_stats['adj_assist_avg'] = player_stats['assist_avg'] * player_stats['multiplier']
-    player_stats['adj_score_avg'] = player_stats['score_avg'] * player_stats['multiplier']
 
     player_stats = player_stats.sort_values(by='mvp_score', ascending=False)
 
@@ -125,8 +168,8 @@ def get_monthly_highlights(df, player_monthly_sr, total_objs_dict):
         'top_wins': player_stats.nlargest(3, 'wins'),
         'top_avg_kills': player_stats.nlargest(3, 'adj_kill_avg'),
         'top_high_redeploys': player_stats.nlargest(3, 'adj_redeploy_avg'),
-        'top_soft_puncher': player_stats.nlargest(3, 'adj_assist_avg'),
-        'top_score': player_stats.nlargest(3, 'adj_score_avg'),
+        'top_soft_puncher': player_stats.nlargest(3, 'assist_avg'),
+        'top_score': player_stats.nlargest(3, 'score_avg'),
         
         'top_lvp': player_stats.nsmallest(3, 'mvp_score'),
         'top_waste_bullet': player_stats.nlargest(3, 'dmg_per_kill'),
@@ -143,65 +186,17 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
         start_date = datetime(now.year, now.month, 1)
         end_date = start_date
 
-    df = load_data(start_date, end_date)
-    if df.empty:
+    res = get_highlights_for_period(start_date, end_date)
+    if not res:
         logger.warning("No data available to generate dashboard.")
         return None
-
-    # Load clan names just to be sure we only include valid ones
-    with open(PLAYER_NAMES_FILE_PATH, 'r') as f:
-        clan_mapping = json.load(f)
-    valid_clan_names = list(clan_mapping.keys())
-
-    # Multi-month objective and SR calculation
-    months = df['parsed_date'].dt.to_period('M').unique() if 'parsed_date' in df.columns else [None]
-    player_monthly_sr = {}
-    total_objs_dict = {p: 0 for p in valid_clan_names}
-    
-    # Calculate per-month SR to get Peak Rank and Avg SR
-    for month in months:
-        month_df = df[df['parsed_date'].dt.to_period('M') == month] if month is not None else df
-        if month_df.empty:
-            continue
-            
-        objs_list_month = calculate_objectives(month_df, valid_clan_names)
-        obj_dict_month = {p['player_name']: p['total_completed'] for p in objs_list_month}
         
-        wins_month = month_df[month_df['player_name'].isin(valid_clan_names)].groupby('player_name')['match_id'].nunique()
-        
-        for player in valid_clan_names:
-            w = wins_month.get(player, 0)
-            o = obj_dict_month.get(player, 0)
-            
-            # Record monthly SR for peak calculation
-            if w > 0 or o > 0:
-                sr, rank, mult = calculate_sr_and_rank(w, o)
-                if player not in player_monthly_sr:
-                    player_monthly_sr[player] = []
-                player_monthly_sr[player].append((sr, rank, mult))
-
-    # Calculate overall objectives for the UI over the entire period BEFORE filtering out non-clan members
-    objs_list_ui = calculate_objectives(df, valid_clan_names)
-    played_players = df[df['player_name'].isin(valid_clan_names)]['player_name'].unique()
-    objs_list = [p for p in objs_list_ui if p['player_name'] in played_players]
-    objs_list.sort(key=lambda x: x['total_completed'], reverse=True)
-    
-    total_objs_dict = {p['player_name']: p['total_completed'] for p in objs_list}
-
-    # Filter to only clan members for the rest of the dashboard
-    df = df[df['player_name'].isin(valid_clan_names)]
-
-    if df.empty:
-        logger.warning("No clan data available to generate dashboard.")
-        return None
-
-    # Global Stats
-    total_plays = df['match_id'].nunique()
-    total_kills = int(df['kills'].sum())
-
-    highlights = get_monthly_highlights(df, player_monthly_sr, total_objs_dict)
+    df, highlights, player_monthly_sr, total_objs_dict, months, objs_list = res
     player_stats = highlights['player_stats']
     num_months = len([m for m in months if m is not None]) or 1
+
+    total_plays = df['match_id'].nunique()
+    total_kills = int(df['kills'].sum())
 
     # Formatter helpers
     def format_val(df_subset, key, fmt_str="{:.1f}"):
@@ -212,8 +207,8 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     wins_list = [(r['player_name'], str(int(r['wins']))) for _, r in highlights['top_wins'].iterrows()]
     avg_kills_list = format_val(highlights['top_avg_kills'], 'adj_kill_avg')
     high_redeploys_list = format_val(highlights['top_high_redeploys'], 'adj_redeploy_avg')
-    soft_puncher_list = format_val(highlights['top_soft_puncher'], 'adj_assist_avg')
-    score_list = format_val(highlights['top_score'], 'adj_score_avg', "{:.0f}")
+    soft_puncher_list = format_val(highlights['top_soft_puncher'], 'assist_avg')
+    score_list = format_val(highlights['top_score'], 'score_avg', "{:.0f}")
 
     lvp_list = format_val(highlights['top_lvp'], 'mvp_score')
     waste_bullet_list = format_val(highlights['top_waste_bullet'], 'dmg_per_kill', "{:.0f}")
@@ -319,7 +314,7 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
     # Prestige Row 2
     draw_highlight_col(x_cols_hl[0], y_hl_r2, "Highlander", high_redeploys_list)
     draw_highlight_col(x_cols_hl[1], y_hl_r2, "Atira Fofo", soft_puncher_list)
-    draw_highlight_col(x_cols_hl[2], y_hl_r2, "Contador", score_list)
+    draw_highlight_col(x_cols_hl[2], y_hl_r2, "Zé Lootinho", score_list)
     
     # Mockery Row 3 (starts at column 3 of Row 2)
     draw_highlight_col(x_cols_hl[3], y_hl_r2, "LVP", lvp_list)

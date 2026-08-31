@@ -137,14 +137,14 @@ MONTHLY_TOP_SR_TEMPLATES = [
 ]
 
 MONTHLY_TOP_SCORE_TEMPLATES = [
-    "💰 *Rei dos Contratos:* {name} (Pontuação: {val}). O verdadeiro contador, looteou o mapa inteiro!",
+    "💰 *Zé Lootinho:* {name} (Pontuação: {val}). Looteou o mapa inteiro e esqueceu de atirar!",
     "💰 *O Empreiteiro:* Achou contrato, o {name} tá fazendo. A maior pontuação média do mês foi dele: {val}!",
     "💰 *Silvio Santos do Warzone:* {name} girou a roda e pegou todo o dinheiro do lobby. Pontuação abissal de {val}!",
     "💰 *Sr. Lojinha:* Loot puro e objetivo feito. {name} liderou o índice de pontuação com {val}.",
     "💰 *O Acumulador:* Esquece arma, o negócio dele é baú! {name} dominou com {val} de pontuação.",
     "💰 *Lobo de Wall Street:* O {name} manipulou o mercado de Vondel pra fechar o mês com o maior score: {val}!",
     "💰 *Dono da Loja:* {name} ({val} pts) gastou tanto dinheiro nas caixas de compra que a Activision vai mandar brinde!",
-    "💰 *O Contador Rápido:* Dinheiro na mão é vendaval! {name} lucrou demais e ficou com a pontuação alta de {val}.",
+    "💰 *Zé Lootinho:* Dinheiro na mão é vendaval! {name} focou só no loot e pegou a pontuação alta de {val}.",
     "💰 *Caçador de Recompensas:* Vê contrato de caçada o olho brilha. {name} faturou o topo com {val} de score!",
     "💰 *Síndico do Mapa:* Abriu todas as portas e revirou as gavetas. {name} limpou as casas pra garantir {val} de score.",
     "💰 *O Rico da Favela:* {name} ostentou a maior riqueza da rodada. Compras, contratos e loot renderam {val} pts!",

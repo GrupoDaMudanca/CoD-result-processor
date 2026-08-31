@@ -154,16 +154,16 @@ def send_monthly_awards():
     last_day_prev_month = first_day_this_month - timedelta(days=1)
     first_day_prev_month = last_day_prev_month.replace(day=1)
     
-    from dashboard import generate_dashboard_image, get_monthly_highlights, load_data
+    from dashboard import generate_dashboard_image, get_highlights_for_period
     dashboard_path = generate_dashboard_image(start_date=first_day_prev_month, end_date=last_day_prev_month)
     
-    df = load_data(start_date=first_day_prev_month, end_date=last_day_prev_month)
-    if df.empty or dashboard_path is None:
+    res = get_highlights_for_period(start_date=first_day_prev_month, end_date=last_day_prev_month)
+    if not res or dashboard_path is None:
         logger.warning("No data for last month to generate awards.")
         mark_job_sent("monthly_awards")
         return
         
-    highlights = get_monthly_highlights(df)
+    df, highlights, _, _, _, _ = res
     
     PT_MONTHS = {
         1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
@@ -192,8 +192,8 @@ def send_monthly_awards():
             elif key == 'top_wins': val = int(first_row['wins'])
             elif key == 'top_avg_kills': val = f"{first_row['adj_kill_avg']:.1f}"
             elif key == 'top_high_redeploys': val = f"{first_row['adj_redeploy_avg']:.1f}"
-            elif key == 'top_soft_puncher': val = f"{first_row['adj_assist_avg']:.1f}"
-            elif key == 'top_score': val = f"{first_row['adj_score_avg']:.0f}"
+            elif key == 'top_soft_puncher': val = f"{first_row['assist_avg']:.1f}"
+            elif key == 'top_score': val = f"{first_row['score_avg']:.0f}"
             elif key == 'top_lvp': val = f"{first_row['mvp_score']:.1f}"
             elif key == 'top_waste_bullet': val = f"{first_row['dmg_per_kill']:.0f}"
             elif key == 'top_kill_stealer': val = f"{first_row['dmg_per_kill']:.0f}"
@@ -241,17 +241,17 @@ def send_month_end_hype():
             f"_{intro_msg}_"
         ]
         
-        from dashboard import generate_dashboard_image, get_monthly_highlights, load_data
+        from dashboard import generate_dashboard_image, get_highlights_for_period
         first_day_curr_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         dashboard_path = generate_dashboard_image(start_date=first_day_curr_month, end_date=now)
             
         if dashboard_path:
             messenger.send_photo(dashboard_path, caption=None, msg_type="MONTH_END_HYPE_DASHBOARD")
             
-        df = load_data(start_date=first_day_curr_month, end_date=now)
+        res = get_highlights_for_period(start_date=first_day_curr_month, end_date=now)
         
-        if not df.empty:
-            highlights = get_monthly_highlights(df)
+        if res:
+            df, highlights, _, _, _, _ = res
             for key, templates in MONTHLY_AWARD_TEMPLATES.items():
                 template = random.choice(templates)
                 top_df = highlights.get(key)
@@ -264,8 +264,8 @@ def send_month_end_hype():
                     elif key == 'top_wins': val = int(first_row['wins'])
                     elif key == 'top_avg_kills': val = f"{first_row['adj_kill_avg']:.1f}"
                     elif key == 'top_high_redeploys': val = f"{first_row['adj_redeploy_avg']:.1f}"
-                    elif key == 'top_soft_puncher': val = f"{first_row['adj_assist_avg']:.1f}"
-                    elif key == 'top_score': val = f"{first_row['adj_score_avg']:.0f}"
+                    elif key == 'top_soft_puncher': val = f"{first_row['assist_avg']:.1f}"
+                    elif key == 'top_score': val = f"{first_row['score_avg']:.0f}"
                     elif key == 'top_lvp': val = f"{first_row['mvp_score']:.1f}"
                     elif key == 'top_waste_bullet': val = f"{first_row['dmg_per_kill']:.0f}"
                     elif key == 'top_kill_stealer': val = f"{first_row['dmg_per_kill']:.0f}"

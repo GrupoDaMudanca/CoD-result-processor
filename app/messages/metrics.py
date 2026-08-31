@@ -551,7 +551,7 @@ MATCH_LVP_MESSAGES = [
 
 HIGH_SCORE_MESSAGES = [
     lambda name: f"Alguém avisa o {name} que isso é jogo de tiro e não Banco Imobiliário. O cara só abriu caixa o jogo inteiro! 💰🏦",
-    lambda name: f"O {name} é o verdadeiro contador do time. Loot, contrato e zero tiro! Rei do Score! 📈🛒",
+    lambda name: f"O {name} é o verdadeiro Zé Lootinho do time. Loot, contrato e zero tiro! Rei do Score! 📈🛒",
     lambda name: f"Se precisar abrir um CNPJ no Warzone, chama o {name}! O cara faturou o maior score looteando! 💼💸",
     lambda name: f"Arma pra que? O {name} ganha jogo na base do contrato de caçada e caixa de suprimento! 📦💸",
     lambda name: f"O {name} fez um curso no Sebrae antes de jogar. Maior score só administrando loot! 👔📊",
