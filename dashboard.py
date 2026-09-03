@@ -67,14 +67,49 @@ def get_highlights_for_period(start_date, end_date):
         obj_dict_month = {p['player_name']: p['total_completed'] for p in objs_list_month}
         wins_month = month_df[month_df['player_name'].isin(valid_clan_names)].groupby('player_name')['match_id'].nunique()
         
+        month_stats = {}
         for player in valid_clan_names:
             w = wins_month.get(player, 0)
             o = obj_dict_month.get(player, 0)
             if w > 0 or o > 0:
                 sr, rank, mult = calculate_sr_and_rank(w, o)
-                if player not in player_monthly_sr:
-                    player_monthly_sr[player] = []
-                player_monthly_sr[player].append((sr, rank, mult))
+                month_stats[player] = [sr, rank, mult, w]
+                
+        # Elect Rei Delas for the month
+        cands = [p for p, stats in month_stats.items() if stats[1] == 'Iridescente' and stats[3] >= 30]
+        if cands:
+            month_player_stats = month_df[month_df['player_name'].isin(cands)].groupby('player_name').agg(
+                kills=('kills', 'sum'),
+                damage=('damage', 'sum'),
+                assists=('assists', 'sum') if 'assists' in month_df.columns else ('kills', 'sum'),
+                redeploys=('redeploys', 'sum') if 'redeploys' in month_df.columns else ('kills', 'sum')
+            ).reset_index()
+            
+            best_cand = None
+            best_wins = -1
+            best_mvp = -1
+            
+            for _, row in month_player_stats.iterrows():
+                p = row['player_name']
+                w = month_stats[p][3]
+                k = row['kills'] / w if w > 0 else 0
+                a = row['assists'] / w if w > 0 else 0
+                r = row['redeploys'] / w if w > 0 else 0
+                d = row['damage'] / w if w > 0 else 0
+                mult = month_stats[p][2]
+                mvp = ((k * 10) + (a * 5) + (r * 5) + (d / 100)) * mult
+                if w > best_wins or (w == best_wins and mvp > best_mvp):
+                    best_cand = p
+                    best_wins = w
+                    best_mvp = mvp
+                    
+            if best_cand:
+                month_stats[best_cand][1] = 'Rei_Delas'
+                
+        for player, stats in month_stats.items():
+            if player not in player_monthly_sr:
+                player_monthly_sr[player] = []
+            player_monthly_sr[player].append((stats[0], stats[1], stats[2]))
 
     objs_list_ui = calculate_objectives(df, valid_clan_names)
     played_players = df[df['player_name'].isin(valid_clan_names)]['player_name'].unique()
@@ -142,7 +177,7 @@ def get_monthly_highlights(df, player_monthly_sr, total_objs_dict):
         missed_months = num_months - len(monthly_data)
         
         avg_sr = (played_months_sr_sum + (missed_months * 500)) / num_months
-        avg_mult = avg_sr / 1000.0
+        avg_mult = round(avg_sr / 1000.0, 1)
         
         return avg_sr, peak_rank, avg_mult
 
@@ -150,6 +185,26 @@ def get_monthly_highlights(df, player_monthly_sr, total_objs_dict):
     player_stats['sr'] = [x[0] for x in sr_data]
     player_stats['rank'] = [x[1] for x in sr_data]
     player_stats['multiplier'] = [x[2] for x in sr_data]
+
+    # Final Rei Delas Election
+    cands_rei = player_stats[player_stats['rank'] == 'Rei_Delas'].copy()
+    if not cands_rei.empty:
+        cands_rei['rei_count'] = cands_rei['player_name'].apply(lambda p: sum(1 for m in player_monthly_sr.get(p, []) if m[1] == 'Rei_Delas'))
+        temp_base = (cands_rei['kill_avg'] * 10) + (cands_rei['assist_avg'] * 5) + (cands_rei['redeploy_avg'] * 5) + (cands_rei['damage_avg'] / 100)
+        cands_rei['_temp_mvp'] = temp_base * cands_rei['multiplier']
+        
+        cands_rei = cands_rei.sort_values(by=['rei_count', 'wins', '_temp_mvp'], ascending=[False, False, False])
+        true_rei = cands_rei.iloc[0]['player_name']
+        
+        # Demote the others back to Iridescente
+        losers = cands_rei[cands_rei['player_name'] != true_rei]['player_name']
+        if not losers.empty:
+            player_stats.loc[player_stats['player_name'].isin(losers), 'rank'] = 'Iridescente'
+
+    # Cap non-Rei-Delas Iridescentes
+    mask_iri_cap = (player_stats['rank'] == 'Iridescente') & (player_stats['sr'] > 2099)
+    player_stats.loc[mask_iri_cap, 'sr'] = 2099
+    player_stats.loc[mask_iri_cap, 'multiplier'] = 2.1
 
     # Calculate Base Performance Score and MVP
     player_stats['base_score'] = (player_stats['kill_avg'] * 10) + (player_stats['assist_avg'] * 5) + (player_stats['redeploy_avg'] * 5) + (player_stats['damage_avg'] / 100)
@@ -387,7 +442,7 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
             str(row['player_name']),
             str(row['rank']),
             f"{row['sr']:.0f}",
-            f"x{row['multiplier']:.2f}",
+            f"x{row['multiplier']:.1f}",
             f"{row['mvp_score']:.1f}",
             str(int(row['wins'])),
             f"{row['kill_avg']:.1f}",
@@ -406,17 +461,21 @@ def generate_dashboard_image(output_path=None, start_date=None, end_date=None):
             if idx == 1:
                 import matplotlib.image as mpimg
                 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-                # Translate PT rank name → EN filename
-                PT_TO_EN = {
-                    "Bronze": "Bronze", "Prata": "Silver", "Ouro": "Gold",
-                    "Platina": "Platinum", "Diamante": "Diamond",
-                    "Carmesim": "Crimson", "Iridescente": "Iridescent"
-                }
-                parts = val.split(' ')
-                en_base = PT_TO_EN.get(parts[0], parts[0])
-                en_val = ' '.join([en_base] + parts[1:])
-                badge_filename = en_val.replace(' ', '_') + '.png'
-                badge_path = os.path.join('assets', 'badges', badge_filename)
+                if row['rank']:
+                    rank_en_map = {
+                        "Bronze": "Bronze", "Prata": "Silver", "Ouro": "Gold",
+                        "Platina": "Platinum", "Diamante": "Diamond", 
+                        "Carmesim": "Crimson", "Iridescente": "Iridescent",
+                        "Rei_Delas": "king"
+                    }
+                    pt_rank = row['rank'].split()[0] if " " in row['rank'] else row['rank']
+                    rank_base = rank_en_map.get(pt_rank, "Bronze")
+                    if pt_rank in ["Bronze", "Prata", "Ouro", "Platina", "Diamante", "Carmesim"]:
+                        sub_rank = row['rank'].split()[1] if len(row['rank'].split()) > 1 else "I"
+                        badge_filename = f"{rank_base}_{sub_rank}.png"
+                    else:
+                        badge_filename = f"{rank_base}.png"
+                    badge_path = os.path.join('assets', 'badges', badge_filename)
                 
                 try:
                     img = mpimg.imread(badge_path)

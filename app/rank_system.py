@@ -23,17 +23,17 @@ def get_rank_from_sr(sr: int) -> str:
         return "Platina II"
     elif sr < 1400:
         return "Platina III"
-    elif sr < 1433:
-        return "Diamante I"
-    elif sr < 1466:
-        return "Diamante II"
     elif sr < 1500:
-        return "Diamante III"
-    elif sr < 1533:
-        return "Carmesim I"
-    elif sr < 1566:
-        return "Carmesim II"
+        return "Diamante I"
     elif sr < 1600:
+        return "Diamante II"
+    elif sr < 1700:
+        return "Diamante III"
+    elif sr < 1766:
+        return "Carmesim I"
+    elif sr < 1833:
+        return "Carmesim II"
+    elif sr < 1900:
         return "Carmesim III"
     else:
         return "Iridescente"
@@ -52,13 +52,13 @@ def calculate_sr_and_rank(wins: int, objectives: int) -> tuple[int, str, float]:
     elif objectives < 8:
         final_sr = min(gross_sr, 1399)
     elif objectives < 12:
-        final_sr = min(gross_sr, 1499)
+        final_sr = min(gross_sr, 1699)
     elif objectives < 16:
-        final_sr = min(gross_sr, 1599)
+        final_sr = min(gross_sr, 1899)
     else:
         final_sr = gross_sr
 
-    multiplier = final_sr / 1000.0
+    multiplier = round(final_sr / 1000.0, 1)
     rank = get_rank_from_sr(final_sr)
         
     return final_sr, rank, multiplier
